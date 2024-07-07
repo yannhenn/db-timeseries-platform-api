@@ -27,7 +27,7 @@ API_PORT=8000
 ```
 Replace the JWT_SECRET with a secret 32 bit long hash digest, that you generate with openssl:
 
-``sh
+```sh
 openssl rand -hex 32
 ```
 ## Running the api
