@@ -18,8 +18,8 @@ Populate the .env file with the following environment variables:
 CASSANDRA_URLS='localhost, 127.0.0.1'
 CASSANDRA_PORT=9042
 CASSANDRA_KEYSPACE='IoTData'
-CASSANDRA_USERNAME='YouCanLeaveThisEmpty'
-CASSANDRA_PASSWORD='YouCanLeaveThisEmpty'
+CASSANDRA_USERNAME='cassandra'
+CASSANDRA_PASSWORD='cassandra'
 
 JWT_SECRET='generated jwt secret'
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

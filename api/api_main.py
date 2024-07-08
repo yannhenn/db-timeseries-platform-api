@@ -5,15 +5,19 @@ from cassandra.cluster import Cluster, Session, ResultSet
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 import uvicorn, dotenv, os, jwt, typing
+from data_objects.database_objects import Database
 
+
+#Env var loading
 dotenv.load_dotenv()
-app = FastAPI()
-
 cluster_addrs = os.environ.get("CASSANDRA_URLS").split(",")
 JWT_SECRET = os.environ.get("JWT_SECRET")
 CASSANDRA_PORT = os.environ.get("CASSANDRA_PORT")
-security = HTTPBearer
+CASSANDRA_KEYSPACE = os.environ.get("CASSANDRA_KEYSPACE")
 
+app = FastAPI()
+security = HTTPBearer
+database = Database(keyspace_name=CASSANDRA_KEYSPACE)
 """
 Returns the JWT subtoken
 """
@@ -35,7 +39,10 @@ async def get_token_from_requests(auth: typing.Optional[HTTPAuthorizationCredent
     else:
         token = auth.credentials
         return token
-
+"""
+This function returns a new DB session with the supplied 
+credentials
+ """
 def get_db_session_atomic(username, password) -> Session:
     cluster = Cluster(contact_points=cluster_addrs, port = CASSANDRA_PORT)
     auth_provider = PlainTextAuthProvider(username=username, password=password)
@@ -44,7 +51,7 @@ def get_db_session_atomic(username, password) -> Session:
 
 @app.get("/")
 def get_root():
-    return "Hello to API"
+    return "Hello to IoT API"
 
 @app.get("/getToken")
 def get_root(username: str, password: str):
@@ -69,7 +76,13 @@ def get_keyspaces(token: str = Depends(get_token_from_requests)):
     all_keyspaces = list(query_result)
     return all_keyspaces
 
+def get_all_signals(sourceID:str, token: str = Depends(get_token_from_requests)):
+    pass
+def get_all_sources(token: str = Depends(get_token_from_requests)):
+    pass
+
 def main():
+    database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))
 
 if(__name__ == '__main__'):
