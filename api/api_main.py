@@ -5,7 +5,7 @@ from cassandra.cluster import Cluster, Session, ResultSet
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 import uvicorn, dotenv, os, jwt, typing
-from data_objects.database_objects import Database
+from data_objects.database_objects import Database, Signal, Source
 
 
 #Env var loading
@@ -76,9 +76,21 @@ def get_keyspaces(token: str = Depends(get_token_from_requests)):
     all_keyspaces = list(query_result)
     return all_keyspaces
 
-def get_all_signals(sourceID:str, token: str = Depends(get_token_from_requests)):
-    pass
+@app.post("/addSignal")
+def add_signal(signal:Signal, token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    return ""
+
+@app.post("/addSource")
+def add_source(source:Source, token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    return ""
+
+@app.get("/listSources")
 def get_all_sources(token: str = Depends(get_token_from_requests)):
+    pass
+@app.get("/listSignals")
+def get_all_sources(source_name:str,token: str = Depends(get_token_from_requests)):
     pass
 
 def main():

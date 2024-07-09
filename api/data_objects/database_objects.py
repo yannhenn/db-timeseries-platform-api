@@ -3,6 +3,7 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from datetime import datetime
 from enum import Enum
+from pydantic import BaseModel
 import logging
 SOURCE_METADATA_TABLE = "meta_sources"
 SIGNAL_METADATA_TABLE = "meta_signals"
@@ -14,29 +15,24 @@ class TSType(Enum):
     STRING = 2
     INT = 3
 """One singular datapoint"""
-class TSPoint:
+class TSPoint():
     timestamp:datetime
     value:any
 """A list of timeseries of the same type"""
-class Timeseries:
+class Timeseries():
     datatype:TSType
     TSPoints:list[TSPoint]
 
 """A timeseries dataset container that resembles a singular timeseries like data of a single probe"""
-class Signal:
+class Signal(BaseModel):
     meta_info:str
     unique_name:str
-    timeseries_data:Timeseries
-    def __init__(self):
-        pass
 
 """A device like a weather station"""
-class Source:
+class Source(BaseModel):
     meta_info:str
+    meta_zone:str
     unique_name:str
-    signals:Signal
-    def __init__(self):
-        pass
 
 class Database:
     __keyspace_name__:str
@@ -66,6 +62,7 @@ class Database:
             source_name text,
             PRIMARY KEY (name, source_name)
         )
+        WITH CLUSTERING ORDER BY (source_name ASC)
         """ % SIGNAL_METADATA_TABLE)
     
     def add_source(self, source:Source, session:Session):
@@ -84,6 +81,6 @@ class Database:
             VALUES ( ?, ?, ?)
             """ % SIGNAL_METADATA_TABLE, consistency_level=ConsistencyLevel.ONE)
         response = session.execute(query, (signal.unique_name, signal.meta_info, source_name))
-
+        response.all()
     def get_sources(self, session:Session) -> list:
         pass
