@@ -11,17 +11,18 @@ SIGNAL_INSTANCE_PREFIX = "data_"
 
 log = logging.getLogger()
 class TSType(Enum):
-    FLOAT = 1
-    STRING = 2
-    INT = 3
+    INT = "INT"
+    FLOAT = "FLOAT"
+    STRING = "STRING"
+    
 """One singular datapoint"""
-class TSPoint():
+class TSPoint(BaseModel):
     timestamp:datetime
-    value:any
-"""A list of timeseries of the same type"""
-class Timeseries():
+    value:int|float|str
+"""A list of timeseries points of the same type"""
+class Timeseries(BaseModel):
     datatype:TSType
-    TSPoints:list[TSPoint]
+    tsPoints:list[TSPoint]
 
 """A timeseries dataset container that resembles a singular timeseries like data of a single probe"""
 class Signal(BaseModel):
@@ -104,3 +105,30 @@ class Database:
             row = row_raw._asdict()
             signals.append(Signal(unique_name=row['name'], meta_info=row['meta_info'], source_name=row['source_name'])) 
         return signals
+    def write_timeseries(self, source_name:str, signal_name:str, timeseries:Timeseries, session:Session):
+        log.info(f"Writing timeseries {signal_name} from source {source_name} to database.")
+        tablename = f"{SIGNAL_INSTANCE_PREFIX}{source_name.lower().replace('_','')}_{signal_name.lower().replace('_','')}"
+        session.set_keyspace(self.__keyspace_name__)
+        session.execute("""
+        CREATE TABLE IF NOT EXISTS %s (
+            event_time timestamp,
+            date date, 
+            value_int int,
+            value_float float,
+            value_text text,
+            PRIMARY KEY (date, event_time)
+        ) WITH CLUSTERING ORDER BY (event_time DESC);
+        """ % tablename)
+        query = SimpleStatement(f"INSERT INTO {tablename} (event_time, date, value_int, value_float, value_text) VALUES ( %s, %s, %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
+        for t_point in timeseries.tsPoints:
+            event_date = t_point.timestamp.date()
+            v_int = None
+            v_float = None
+            v_text = None
+            if(timeseries.datatype == TSType.INT):
+                v_int = t_point.value
+            elif(timeseries.datatype == TSType.FLOAT):
+                v_float = t_point.value
+            else:
+                v_text = t_point.value
+            response = session.execute(query, (t_point.timestamp, event_date, v_int, v_float, v_text))

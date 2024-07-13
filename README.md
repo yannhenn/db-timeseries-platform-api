@@ -39,3 +39,6 @@ Run the api with the following command:
 python3 api/api_main.py
 ```
 This serves the application on port 8000.
+## Swagger
+You can visit the swagger docs after running at:
+http://localhost:8000/docs

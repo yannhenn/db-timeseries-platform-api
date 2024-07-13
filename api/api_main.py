@@ -5,7 +5,7 @@ from cassandra.cluster import Cluster, Session, ResultSet
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 import uvicorn, dotenv, os, jwt, typing
-from data_objects.database_objects import Database, Signal, Source
+from data_objects.database_objects import Database, Signal, Source, Timeseries
 
 
 #Env var loading
@@ -104,6 +104,11 @@ def get_all_signals(source_name:str,token: str = Depends(get_token_from_requests
     authdict = get_up_from_jwt_token(token)
     signals = database.list_signals(source_name=source_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
     return signals
+@app.put("/putTimeseries/{source_name}/{signal_name}")
+def put_timeseries(source_name:str, signal_name:str, timeseries:Timeseries, token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    database.write_timeseries(source_name=source_name, signal_name=signal_name, timeseries=timeseries, session=get_db_session_atomic(authdict['username'], authdict['password']))
+    return f"{source_name} {signal_name} 💾 ✅"
 def main():
     database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))
