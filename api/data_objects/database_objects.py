@@ -27,6 +27,7 @@ class Timeseries():
 class Signal(BaseModel):
     meta_info:str
     unique_name:str
+    source_name:str
 
 """A device like a weather station"""
 class Source(BaseModel):
@@ -45,12 +46,13 @@ class Database:
             CREATE KEYSPACE IF NOT EXISTS %s
             WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }
             """ % self.__keyspace_name__)
-        resp.all
+        resp.all()
         session.set_keyspace(self.__keyspace_name__)
         session.execute("""
         CREATE TABLE IF NOT EXISTS %s (
             unique_name text,
             meta_info text,
+            meta_zone text,
             PRIMARY KEY (unique_name)
         )
         """ % SOURCE_METADATA_TABLE)
@@ -64,23 +66,41 @@ class Database:
         )
         WITH CLUSTERING ORDER BY (source_name ASC)
         """ % SIGNAL_METADATA_TABLE)
+
+        session.execute(f"CREATE INDEX IF NOT EXISTS ON {SIGNAL_METADATA_TABLE} (source_name)")
     
     def add_source(self, source:Source, session:Session):
         log.info("Adding source %s to database." % source.unique_name)
-        query = SimpleStatement("""
-            INSERT INTO % (unique_name, meta_info)
-            VALUES ( ?, ?)
-            """ % SOURCE_METADATA_TABLE, consistency_level=ConsistencyLevel.ONE)
-        response = session.execute(query, (source.unique_name, source.meta_info))
+        query = SimpleStatement(f"INSERT INTO {SOURCE_METADATA_TABLE} (unique_name, meta_info, meta_zone) VALUES ( %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
+        session.set_keyspace(self.__keyspace_name__)
+        response = session.execute(query, (source.unique_name, source.meta_info, source.meta_zone))
         response.all()
 
-    def add_signal(self, source_name:str, signal:Signal, session:Session):
-        log.info("Adding signal %s to database." % signal.name)
-        query = SimpleStatement("""
-            INSERT INTO % (name, meta_info, source_name)
-            VALUES ( ?, ?, ?)
-            """ % SIGNAL_METADATA_TABLE, consistency_level=ConsistencyLevel.ONE)
-        response = session.execute(query, (signal.unique_name, signal.meta_info, source_name))
+    def add_signal(self, signal:Signal, session:Session):
+        log.info("Adding signal %s to database." % signal.unique_name)
+        query = SimpleStatement(f"INSERT INTO {SIGNAL_METADATA_TABLE} (name, meta_info, source_name) VALUES ( %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
+        session.set_keyspace(self.__keyspace_name__)
+        response = session.execute(query, (signal.unique_name, signal.meta_info, signal.source_name))
         response.all()
-    def get_sources(self, session:Session) -> list:
-        pass
+
+    def list_sources(self, session:Session) -> list:
+        query = SimpleStatement(f"SELECT * FROM {SOURCE_METADATA_TABLE}", consistency_level=ConsistencyLevel.QUORUM);
+        session.set_keyspace(self.__keyspace_name__)
+        response:ResultSet = session.execute(query)
+        rows = response.all()
+        sources = list()
+        for row_raw in rows:
+            row = row_raw._asdict()
+            sources.append(Source(unique_name=row["unique_name"], meta_info=row["meta_info"], meta_zone=row["meta_zone"]))
+        return sources
+    
+    def list_signals(self, source_name, session:Session) -> list:
+        query = SimpleStatement(f"SELECT * FROM {SIGNAL_METADATA_TABLE} where source_name='{source_name}'", consistency_level=ConsistencyLevel.QUORUM);
+        session.set_keyspace(self.__keyspace_name__)
+        response:ResultSet = session.execute(query)
+        rows = response.all()
+        signals = list()
+        for row_raw in rows:
+            row = row_raw._asdict()
+            signals.append(Signal(unique_name=row['name'], meta_info=row['meta_info'], source_name=row['source_name'])) 
+        return signals

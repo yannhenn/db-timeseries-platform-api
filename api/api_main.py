@@ -47,7 +47,10 @@ def get_db_session_atomic(username, password) -> Session:
     cluster = Cluster(contact_points=cluster_addrs, port = CASSANDRA_PORT)
     auth_provider = PlainTextAuthProvider(username=username, password=password)
     cluster.auth_provider = auth_provider
-    return cluster.connect()
+    try:
+        return cluster.connect()
+    except:
+        raise HTTPException(status_code=401, detail="Session could not be created with current token!")
 
 @app.get("/")
 def get_root():
@@ -79,20 +82,28 @@ def get_keyspaces(token: str = Depends(get_token_from_requests)):
 @app.post("/addSignal")
 def add_signal(signal:Signal, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
-    return ""
+    session:Session = get_db_session_atomic(authdict['username'], authdict['password'])
+    database.add_signal(signal=signal, session=session)
+    return f"{signal.unique_name} 💾 ✅"
 
 @app.post("/addSource")
 def add_source(source:Source, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
-    return ""
+    session:Session = get_db_session_atomic(authdict['username'], authdict['password'])
+    database.add_source(source=source, session=session)
+    return f"{source.unique_name} 💾 ✅"
 
 @app.get("/listSources")
 def get_all_sources(token: str = Depends(get_token_from_requests)):
-    pass
-@app.get("/listSignals")
-def get_all_sources(source_name:str,token: str = Depends(get_token_from_requests)):
-    pass
+    authdict = get_up_from_jwt_token(token)
+    sources = database.list_sources(session=get_db_session_atomic(authdict['username'], authdict['password']))
+    return sources
 
+@app.get("/listSignals")
+def get_all_signals(source_name:str,token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    signals = database.list_signals(source_name=source_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
+    return signals
 def main():
     database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))
