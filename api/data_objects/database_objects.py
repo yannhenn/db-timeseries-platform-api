@@ -142,9 +142,24 @@ class Database:
         if(start_time.date()!=end_time.date()):
             query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}'", consistency_level=ConsistencyLevel.QUORUM);
         else:
-            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}' and event_time <= '{end_time}'", consistency_level=ConsistencyLevel.QUORUM);
+            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}' and event_time <= '{end_time}' order by event_time desc", consistency_level=ConsistencyLevel.QUORUM);
             response:ResultSet = session.execute(query)
             rows = response.all()
+            ts_points_int = list()
+            ts_points_float = list()
+            ts_points_text = list()
             for row_raw in rows:
                 row = row_raw._asdict()
-                t_point = TSPoint(timestamp=row['event_time'], value=row['value_int'])
+                if(row['value_int'] is not None):
+                    t_point = TSPoint(timestamp=row['event_time'], value=row['value_int'])
+                    ts_points_int.append(t_point)
+                elif(row['value_float'] is not None):
+                    t_point = TSPoint(timestamp=row['event_time'], value=row['value_float'])
+                    ts_points_float.append(t_point)
+                elif(row['value_text'] is not None):
+                    t_point = TSPoint(timestamp=row['event_time'], value=row['value_text'])
+                    ts_points_text.append(t_point)
+            ts_int = Timeseries(datatype=TSType.INT, tsPoints=ts_points_int)
+            ts_float = Timeseries(datatype=TSType.FLOAT, tsPoints=ts_points_float)
+            ts_string = Timeseries(datatype=TSType.STRING, tsPoints=ts_points_text)
+            return ts_int, ts_float, ts_string
