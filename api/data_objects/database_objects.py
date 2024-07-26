@@ -1,10 +1,10 @@
 from cassandra.cluster import Session, ResultSet
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from pydantic import BaseModel
-import logging
+import logging, pytz
 SOURCE_METADATA_TABLE = "meta_sources"
 SIGNAL_METADATA_TABLE = "meta_signals"
 SIGNAL_INSTANCE_PREFIX = "data_"
@@ -121,7 +121,7 @@ class Database:
         """ % tablename)
         query = SimpleStatement(f"INSERT INTO {tablename} (event_time, date, value_int, value_float, value_text) VALUES ( %s, %s, %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
         for t_point in timeseries.tsPoints:
-            event_date = t_point.timestamp.date()
+            event_date = t_point.timestamp.astimezone(pytz.utc).date()
             v_int = None
             v_float = None
             v_text = None
@@ -131,4 +131,20 @@ class Database:
                 v_float = t_point.value
             else:
                 v_text = t_point.value
-            response = session.execute(query, (t_point.timestamp, event_date, v_int, v_float, v_text))
+            try:
+                response:ResultSet = session.execute(query, (t_point.timestamp, event_date, v_int, v_float, v_text))
+            except:
+                return False
+        return True
+    def read_timeseries(self, source_name:str, signal_name:str, start_time: datetime, end_time: datetime, session:Session) -> Timeseries:
+        session.set_keyspace(self.__keyspace_name__)
+        tablename = f"{SIGNAL_INSTANCE_PREFIX}{source_name.lower().replace('_','')}_{signal_name.lower().replace('_','')}"
+        if(start_time.date()!=end_time.date()):
+            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}'", consistency_level=ConsistencyLevel.QUORUM);
+        else:
+            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}' and event_time <= '{end_time}'", consistency_level=ConsistencyLevel.QUORUM);
+            response:ResultSet = session.execute(query)
+            rows = response.all()
+            for row_raw in rows:
+                row = row_raw._asdict()
+                t_point = TSPoint(timestamp=row['event_time'], value=row['value_int'])

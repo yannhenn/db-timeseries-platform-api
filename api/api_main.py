@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 from cassandra import ConsistencyLevel
@@ -104,11 +105,24 @@ def get_all_signals(source_name:str,token: str = Depends(get_token_from_requests
     authdict = get_up_from_jwt_token(token)
     signals = database.list_signals(source_name=source_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
     return signals
-@app.put("/putTimeseries/{source_name}/{signal_name}")
+@app.put("/writeTimeseriesData/{source_name}/{signal_name}")
 def put_timeseries(source_name:str, signal_name:str, timeseries:Timeseries, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
-    database.write_timeseries(source_name=source_name, signal_name=signal_name, timeseries=timeseries, session=get_db_session_atomic(authdict['username'], authdict['password']))
-    return f"{source_name} {signal_name} 💾 ✅"
+    applied = database.write_timeseries(source_name=source_name, signal_name=signal_name, timeseries=timeseries, session=get_db_session_atomic(authdict['username'], authdict['password']))
+    if(applied):
+        return f"{source_name} {signal_name} 💾 ✅"
+    else:
+        return f"{source_name} {signal_name} 💾 ❌"
+
+@app.get("/readTimeseriesData/{source_name}/{signal_name}")
+def get_timeseries(source_name:str, signal_name:str, start_time:datetime, end_time:datetime, token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    start_time
+    if(start_time.date()!=end_time.date()):
+        raise HTTPException(status_code=400, detail="start_time and end_time must be on the same date")
+    else:
+        timeseries:Timeseries = database.read_timeseries(source_name=source_name, signal_name=signal_name, start_time= start_time, end_time=end_time, session=get_db_session_atomic(authdict['username'], authdict['password']))
+        return timeseries
 def main():
     database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))
