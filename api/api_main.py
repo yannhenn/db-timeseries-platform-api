@@ -117,12 +117,17 @@ def put_timeseries(source_name:str, signal_name:str, timeseries:Timeseries, toke
 @app.get("/readTimeseriesData/{source_name}/{signal_name}")
 def get_timeseries(source_name:str, signal_name:str, start_time:datetime, end_time:datetime, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
-    start_time
     if(start_time.date()!=end_time.date()):
         raise HTTPException(status_code=400, detail="start_time and end_time must be on the same date")
     else:
         timeseries_tpl = database.read_timeseries(source_name=source_name, signal_name=signal_name, start_time= start_time, end_time=end_time, session=get_db_session_atomic(authdict['username'], authdict['password']))
         return timeseries_tpl
+    
+@app.get("/getLastDataPoint/{source_name}/{signal_name}")
+def get_last_dp(source_name:str, signal_name:str, token: str = Depends(get_token_from_requests)):
+    authdict = get_up_from_jwt_token(token)
+    dp = database.read_latest_dp(source_name=source_name, signal_name=signal_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
+    return dp
 def main():
     database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))

@@ -140,6 +140,7 @@ class Database:
         session.set_keyspace(self.__keyspace_name__)
         tablename = f"{SIGNAL_INSTANCE_PREFIX}{source_name.lower().replace('_','')}_{signal_name.lower().replace('_','')}"
         if(start_time.date()!=end_time.date()):
+            #NotSupportedYet
             query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}'", consistency_level=ConsistencyLevel.QUORUM);
         else:
             query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}' and event_time <= '{end_time}' order by event_time desc", consistency_level=ConsistencyLevel.QUORUM);
@@ -163,3 +164,18 @@ class Database:
             ts_float = Timeseries(datatype=TSType.FLOAT, tsPoints=ts_points_float)
             ts_string = Timeseries(datatype=TSType.STRING, tsPoints=ts_points_text)
             return ts_int, ts_float, ts_string
+    def read_latest_dp(self, source_name:str, signal_name:str, session:Session) -> TSPoint:
+        session.set_keyspace(self.__keyspace_name__)
+        tablename = f"{SIGNAL_INSTANCE_PREFIX}{source_name.lower().replace('_','')}_{signal_name.lower().replace('_','')}"
+        query = SimpleStatement(f"SELECT * FROM {tablename} LIMIT 1", consistency_level=ConsistencyLevel.QUORUM);
+        response:ResultSet = session.execute(query)
+        row_raw = response.one()
+        row = row_raw._asdict()
+        if(row['value_int'] is not None):
+            return TSPoint(timestamp=row['event_time'], value=row['value_int'])
+        elif(row['value_float'] is not None):
+            return TSPoint(timestamp=row['event_time'], value=row['value_float'])
+        elif(row['value_text'] is not None):
+            return TSPoint(timestamp=row['event_time'], value=row['value_text'])
+        else:
+            return None
