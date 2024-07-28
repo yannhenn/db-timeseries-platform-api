@@ -143,7 +143,7 @@ class Database:
             #NotSupportedYet
             query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}'", consistency_level=ConsistencyLevel.QUORUM);
         else:
-            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}' and event_time <= '{end_time}' order by event_time desc", consistency_level=ConsistencyLevel.QUORUM);
+            query = SimpleStatement(f"SELECT * FROM {tablename} where date='{start_time.date()}' and event_time >= '{start_time}+0000' and event_time <= '{end_time}+0000' order by event_time desc", consistency_level=ConsistencyLevel.QUORUM);
             response:ResultSet = session.execute(query)
             rows = response.all()
             ts_points_int = list()

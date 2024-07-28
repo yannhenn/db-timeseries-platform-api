@@ -1,4 +1,6 @@
-import json, dotenv, requests, os, time
+import json, dotenv, requests, os, time, random
+import numpy as np
+from datetime import datetime
 #Env var loading
 dotenv.load_dotenv()
 
@@ -56,29 +58,78 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
             response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
             print(response.text)
 
-def write_value(value_type:str, value):
+def write_value(value_type:str, source_name:str, value, timestamp:datetime):
+    # INT
     if(value_type == 'INT'):
         payload = json.dumps({
         "datatype":"INT",
         "tsPoints":[
             {
-            "timestamp":"2024-07-10T05:00:00+02:00",
-            "value":value
-            },
-            {
-            "timestamp":"2024-07-10T07:00:00+02:00",
-            "value":value
+            "timestamp":timestamp.isoformat(),
+            "value":int(value)
             }
             ]
         })
-        response = requests.request("PUT", API_URL+'/addSignal/', data=payload,  headers=headersList)
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
         print(response.text)
+    #FLOAT
     elif(value_type == 'FlOAT'):
-        pass
+        payload = json.dumps({
+        "datatype":"FLOAT",
+        "tsPoints":[
+            {
+            "timestamp":timestamp.isoformat(),
+            "value":float(value)
+            }
+            ]
+        })
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
+        print(response.text)
+    #TEXT
     else:
-        pass
+        payload = json.dumps({
+        "datatype":"STRING",
+        "tsPoints":[
+            {
+            "timestamp":timestamp.isoformat(),
+            "value":str(value)
+            }
+            ]
+        })
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
+        print(response.text)
 def main():
     upsert_device_info(SOURCE_NAME, f"A simulated device with the following formats: {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
+    generated_int_range = (np.random.randint(-50, 10),np.random.randint(11,100))
+    generated_float_range = (float(np.random.randint(-10,10)),float(np.random.randint(10,40)))
 
+    last_int = np.random.randint(generated_int_range[0], generated_int_range[1]) #will be the latest int value written
+    spread_range_int = abs(generated_int_range[1]-generated_int_range[0])
+    mean_range_int = generated_int_range[0]+(spread_range_int/2)
+
+    last_float = random.uniform(generated_float_range[0], generated_float_range[1]) #will be the latest float value
+    spread_range_float = abs(generated_float_range[1]-generated_float_range[0])
+    mean_range_float = generated_float_range[0]+(spread_range_float/2)
+    
+    trend_int = 0
+    trend_float = 0.0
+
+    while(True):
+        # First set some trend values
+        trend_int = trend_int + ((-random.random()*(float(last_int)-float(mean_range_int))* spread_range_int) / spread_range_int)*0.5
+        trend_float = trend_float + ((-random.random()*(float(last_float)-float(mean_range_float))* spread_range_float) / spread_range_float)*0.5
+        # Simulate data
+        for format in publish_formats:
+            if(format == 'INT'):
+                write_value(format, SOURCE_NAME, int(last_int+trend_int), datetime.now())
+                last_int = int(last_int+trend_int)
+            elif(format =='FLOAT'):
+                write_value(format, SOURCE_NAME, last_float + trend_float, datetime.now())
+                last_float = last_float + trend_float            
+            else:
+                message = f"Calculated following values: INT: {last_int} FLOAT: {last_float}"
+                write_value(format, SOURCE_NAME, message, datetime.now())
+        print(f"Calculated following values: INT: {last_int} FLOAT: {last_float}")
+        time.sleep(delay_sek)
 if(__name__ == '__main__'):
     main()
