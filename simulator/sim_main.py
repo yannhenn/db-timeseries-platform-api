@@ -35,7 +35,7 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
     for signal_type in signal_formats:
         if(signal_type == 'INT'):
             payload = json.dumps({
-            "meta_info":"A simulated int signal",
+            "meta_info":"UNIT: counts, MSG: A simulated int signal",
             "unique_name":signal_names["INT"],
             "source_name":source_name
             })
@@ -43,7 +43,7 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
             print(response.text)
         elif(signal_type == 'FLOAT'):
             payload = json.dumps({
-            "meta_info":"A simulated float signal",
+            "meta_info":"UNIT: C, MSG: A simulated float signal",
             "unique_name":signal_names["FLOAT"],
             "source_name":source_name
             })
@@ -51,7 +51,7 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
             print(response.text)
         else:
             payload = json.dumps({
-            "meta_info":"A simulated text signal",
+            "meta_info":"UNIT: text, MSG: A simulated text signal",
             "unique_name":signal_names["TEXT"],
             "source_name":source_name
             })
