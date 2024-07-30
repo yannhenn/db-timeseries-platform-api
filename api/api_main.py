@@ -128,8 +128,10 @@ def get_last_dp(source_name:str, signal_name:str, token: str = Depends(get_token
     authdict = get_up_from_jwt_token(token)
     dp = database.read_latest_dp(source_name=source_name, signal_name=signal_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
     return dp
+
 def main():
-    database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
+    if("CASSANDRA_USERNAME" in os.environ) and ("CASSANDRA_PASSWORD" in os.environ):
+        database.ensure_database_structure(get_db_session_atomic(os.environ.get("CASSANDRA_USERNAME"), os.environ.get("CASSANDRA_PASSWORD")))
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("API_PORT")))
 
 if(__name__ == '__main__'):
