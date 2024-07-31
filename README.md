@@ -42,3 +42,12 @@ This serves the application on port 8000.
 ## Swagger
 You can visit the swagger docs after running at:
 http://localhost:8000/docs
+
+## How to build the container
+
+The container image creation is defined in the dockerfile.
+To build the api, navigate to the api and bild the container using podman with the 
+following command:
+```sh
+podman build . -t localhost:32000/timeseries-rest-api:0.1
+```
