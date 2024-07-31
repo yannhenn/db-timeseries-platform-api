@@ -13,7 +13,7 @@ from data_objects.database_objects import Database, Signal, Source, Timeseries
 dotenv.load_dotenv()
 cluster_addrs = os.environ.get("CASSANDRA_URLS").split(",")
 JWT_SECRET = os.environ.get("JWT_SECRET")
-CASSANDRA_PORT = os.environ.get("CASSANDRA_PORT")
+CASSANDRA_PORT = int(os.environ.get("CASSANDRA_PORT"))
 CASSANDRA_KEYSPACE = os.environ.get("CASSANDRA_KEYSPACE")
 
 app = FastAPI()
