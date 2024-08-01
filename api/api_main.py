@@ -17,6 +17,7 @@ CASSANDRA_PORT = int(os.environ.get("CASSANDRA_PORT"))
 CASSANDRA_KEYSPACE = os.environ.get("CASSANDRA_KEYSPACE")
 
 app = FastAPI()
+app.title = "DB-Timeseries-Platform-API"
 security = HTTPBearer
 database = Database(keyspace_name=CASSANDRA_KEYSPACE)
 """
@@ -57,6 +58,7 @@ def get_db_session_atomic(username, password) -> Session:
 def get_root():
     return "Hello to IoT API"
 
+@app.get("/getToken", include_in_schema=False)
 @app.get("/getToken/")
 def get_root(username: str, password: str):
     if (username==None or password == None):
@@ -68,6 +70,7 @@ def get_root(username: str, password: str):
             raise HTTPException(status_code=401, detail="Invalid username/password!")
         return get_jwt_token_up(username, password)
 
+@app.get("/keyspaces", include_in_schema=False)
 @app.get("/keyspaces/")
 def get_keyspaces(token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
@@ -80,6 +83,7 @@ def get_keyspaces(token: str = Depends(get_token_from_requests)):
     all_keyspaces = list(query_result)
     return all_keyspaces
 
+@app.post("/addSignal", include_in_schema=False)
 @app.post("/addSignal/")
 def add_signal(signal:Signal, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
@@ -87,6 +91,7 @@ def add_signal(signal:Signal, token: str = Depends(get_token_from_requests)):
     database.add_signal(signal=signal, session=session)
     return f"{signal.unique_name} 💾 ✅"
 
+@app.post("/addSource", include_in_schema=False)
 @app.post("/addSource/")
 def add_source(source:Source, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
@@ -94,17 +99,21 @@ def add_source(source:Source, token: str = Depends(get_token_from_requests)):
     database.add_source(source=source, session=session)
     return f"{source.unique_name} 💾 ✅"
 
+@app.get("/listSources", include_in_schema=False)
 @app.get("/listSources/")
 def get_all_sources(token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
     sources = database.list_sources(session=get_db_session_atomic(authdict['username'], authdict['password']))
     return sources
 
+@app.get("/listSignals", include_in_schema=False)
 @app.get("/listSignals/")
 def get_all_signals(source_name:str,token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
     signals = database.list_signals(source_name=source_name, session=get_db_session_atomic(authdict['username'], authdict['password']))
     return signals
+
+@app.put("/writeTimeseriesData/{source_name}/{signal_name}", include_in_schema=False)
 @app.put("/writeTimeseriesData/{source_name}/{signal_name}/")
 def put_timeseries(source_name:str, signal_name:str, timeseries:Timeseries, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
@@ -114,6 +123,7 @@ def put_timeseries(source_name:str, signal_name:str, timeseries:Timeseries, toke
     else:
         return f"{source_name} {signal_name} 💾 ❌"
 
+@app.get("/readTimeseriesData/{source_name}/{signal_name}", include_in_schema = False)
 @app.get("/readTimeseriesData/{source_name}/{signal_name}/")
 def get_timeseries(source_name:str, signal_name:str, start_time:datetime, end_time:datetime, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)
@@ -123,6 +133,7 @@ def get_timeseries(source_name:str, signal_name:str, start_time:datetime, end_ti
         timeseries_tpl = database.read_timeseries(source_name=source_name, signal_name=signal_name, start_time= start_time, end_time=end_time, session=get_db_session_atomic(authdict['username'], authdict['password']))
         return timeseries_tpl
     
+@app.get("/getLastDataPoint/{source_name}/{signal_name}", include_in_schema = False)
 @app.get("/getLastDataPoint/{source_name}/{signal_name}/")
 def get_last_dp(source_name:str, signal_name:str, token: str = Depends(get_token_from_requests)):
     authdict = get_up_from_jwt_token(token)

@@ -70,7 +70,7 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
         print(response.text)
     #FLOAT
     elif(value_type == 'FlOAT'):
@@ -83,7 +83,7 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
         print(response.text)
     #TEXT
     else:
@@ -96,7 +96,7 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}", data=payload,  headers=headersList)
+        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
         print(response.text)
 def main():
     upsert_device_info(SOURCE_NAME, f"A simulated device with the following formats: {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
