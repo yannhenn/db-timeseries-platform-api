@@ -9,16 +9,14 @@ Configure the device simulator by creating a .env file in this repository with t
 following variables or setting them as environment variables:
 
 ```.env
-API_URL='localhost'
-API_TOKEN='jwt_token_from_api'
-API_PORT=8000
+API_URL='https://iot-db-api.globalshipyard.net'
+API_TOKEN='tokenFromAPI'
 
-SOURCE_NAME='Source1'
-SIGNAL_ZONE_INFO='SIGNAL1'
+SOURCE_NAME='simulated_device_1'
+SOURCE_ZONE_INFO='1,2,3'
 
-PUBLISH_INT='True'
-PUBLISH_FLOAT='True'
-PUBLISH_STRING='True'
+PUBLISH_FORMATS='INT,FLOAT,TEXT'
+TIME_DELAY_SEK='4'
 ```
 You can fetch the API_TOKEN by running the api and requesting a token from the 
 getT0ken endpoint. One can do this via curl.
