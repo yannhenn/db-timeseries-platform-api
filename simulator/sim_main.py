@@ -29,7 +29,7 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
     "meta_info":source_info,
     "unique_name":source_name
     })
-    response = requests.request("POST", API_URL+'/addSource/', data=payload,  headers=headersList)
+    response = requests.request("POST", API_URL+'/addSource/', data=payload,  headers=headersList, verify= False)
     print(response.text)
 
     for signal_type in signal_formats:
@@ -39,7 +39,7 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
             "unique_name":signal_names["INT"],
             "source_name":source_name
             })
-            response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+            response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList, verify=False)
             print(response.text)
         elif(signal_type == 'FLOAT'):
             payload = json.dumps({
@@ -73,7 +73,7 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
         response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
         print(response.text)
     #FLOAT
-    elif(value_type == 'FlOAT'):
+    elif(value_type == 'FLOAT'):
         payload = json.dumps({
         "datatype":"FLOAT",
         "tsPoints":[
