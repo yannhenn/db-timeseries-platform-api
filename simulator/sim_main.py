@@ -1,5 +1,6 @@
 import json, dotenv, requests, os, time, random
 import numpy as np
+import http.client
 from datetime import datetime
 #Env var loading
 dotenv.load_dotenv()
@@ -24,13 +25,18 @@ headersList = {
 }
 
 def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_formats:list):
+    conn = http.client.HTTPSConnection(API_URL, 443)
     payload = json.dumps({
     "meta_zone":zone_info,
     "meta_info":source_info,
     "unique_name":source_name
     })
-    response = requests.request("POST", API_URL+'/addSource/', data=payload,  headers=headersList, verify= False)
-    print(response.text)
+    conn.request("POST", "/addSource/", payload, headersList)
+    response = conn.getresponse()
+    result = response.read()
+    print(result.decode("utf-8"))
+    #response = requests.request("POST", API_URL+'/addSource/', data=payload,  headers=headersList)
+    #print(response.text)
 
     for signal_type in signal_formats:
         if(signal_type == 'INT'):
@@ -39,26 +45,39 @@ def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_f
             "unique_name":signal_names["INT"],
             "source_name":source_name
             })
-            response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList, verify=False)
-            print(response.text)
+            conn.request("POST", "/addSignal/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
+            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+            #print(response.text)
         elif(signal_type == 'FLOAT'):
             payload = json.dumps({
             "meta_info":"UNIT: C, MSG: A simulated float signal",
             "unique_name":signal_names["FLOAT"],
             "source_name":source_name
             })
-            response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
-            print(response.text)
+            conn.request("POST", "/addSignal/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
+            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+            #print(response.text)
         else:
             payload = json.dumps({
             "meta_info":"UNIT: text, MSG: A simulated text signal",
             "unique_name":signal_names["TEXT"],
             "source_name":source_name
             })
-            response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
-            print(response.text)
+            conn.request("POST", "/addSignal/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
+            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+            #print(response.text)
+    conn.close()
 
-def write_value(value_type:str, source_name:str, value, timestamp:datetime):
+def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn:http.client.HTTPSConnection):
     # INT
     if(value_type == 'INT'):
         payload = json.dumps({
@@ -70,8 +89,12 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        print(response.text)
+        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+        response = conn.getresponse()
+        result = response.read()
+        print(result.decode("utf-8"))
+        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+        #print(response.text)
     #FLOAT
     elif(value_type == 'FLOAT'):
         payload = json.dumps({
@@ -83,8 +106,12 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        print(response.text)
+        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+        response = conn.getresponse()
+        result = response.read()
+        print(result.decode("utf-8"))
+        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+        #print(response.text)
     #TEXT
     else:
         payload = json.dumps({
@@ -96,8 +123,12 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime):
             }
             ]
         })
-        response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        print(response.text)
+        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+        response = conn.getresponse()
+        result = response.read()
+        print(result.decode("utf-8"))
+        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+        #print(response.text)
 def main():
     upsert_device_info(SOURCE_NAME, f"A simulated device with the following formats: {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
     generated_int_range = (np.random.randint(-50, 10),np.random.randint(11,100))
@@ -114,6 +145,7 @@ def main():
     trend_int = 0
     trend_float = 0.0
 
+    conn = http.client.HTTPSConnection(API_URL, 443)
     while(True):
         # First set some trend values
         trend_int = trend_int + ((-random.random()*(float(last_int)-float(mean_range_int))* spread_range_int) / spread_range_int)*0.5
@@ -121,15 +153,16 @@ def main():
         # Simulate data
         for format in publish_formats:
             if(format == 'INT'):
-                write_value(format, SOURCE_NAME, int(last_int+trend_int), datetime.now())
+                write_value(format, SOURCE_NAME, int(last_int+trend_int), datetime.now(), conn)
                 last_int = int(last_int+trend_int)
             elif(format =='FLOAT'):
-                write_value(format, SOURCE_NAME, last_float + trend_float, datetime.now())
+                write_value(format, SOURCE_NAME, last_float + trend_float, datetime.now(), conn)
                 last_float = last_float + trend_float            
             else:
                 message = f"Calculated following values: INT: {last_int} FLOAT: {last_float}"
-                write_value(format, SOURCE_NAME, message, datetime.now())
+                write_value(format, SOURCE_NAME, message, datetime.now(), conn)
         print(f"Calculated following values: INT: {last_int} FLOAT: {last_float}")
+        print("◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤")
         time.sleep(delay_sek)
 if(__name__ == '__main__'):
     main()
