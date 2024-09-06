@@ -130,7 +130,7 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn
         #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
         #print(response.text)
 def main():
-    upsert_device_info(SOURCE_NAME, f"A simulated device with the following formats: {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
+    upsert_device_info(SOURCE_NAME, f"Air pressure, temperature, humidity, co2 {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
     generated_int_range = (np.random.randint(-50, 10),np.random.randint(11,100))
     generated_float_range = (float(np.random.randint(-10,10)),float(np.random.randint(10,40)))
 
