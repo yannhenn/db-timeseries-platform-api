@@ -8,6 +8,15 @@ Before installing the packages, I recommend setting up a virtual environment in 
 ```sh
 python -m venv iot-db-api-venv
 ```
+
+then activate the venv whenever you are in the project repo and want to work with python libs:
+```sh
+#for fish shell linux
+source iot-db-api-venv/bin/activate.fish
+#for bash linux/mac
+source iot-db-api-venv/bin/activate
+```
+
 To install the dependencies, switch to the projects root dir ( the one you should be in rn) and run:
 ```sh
 pip install -r requirements.txt --break-system-packages
