@@ -12,8 +12,8 @@ following variables or setting them as environment variables:
 API_URL='https://iot-db-api.globalshipyard.net'
 API_TOKEN='tokenFromAPI'
 
-SOURCE_NAME='simulated_device_1'
-SOURCE_ZONE_INFO='1,2,3'
+SOURCE_NAME='A103_Climate'
+SIGNAL_NAME='-9,8,12'
 
 PUBLISH_FORMATS='INT,FLOAT,TEXT'
 TIME_DELAY_SEK='4'

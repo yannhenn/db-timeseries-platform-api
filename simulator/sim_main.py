@@ -7,16 +7,18 @@ dotenv.load_dotenv()
 
 TOKEN_BEARER = os.environ.get("API_TOKEN")
 API_URL = os.environ.get("API_URL")
-SOURCE_ZONE_INFO = os.environ.get("SOURCE_ZONE_INFO")
+SIGNAL_NAME = os.environ.get("SIGNAL_NAME")
 SOURCE_NAME = os.environ.get("SOURCE_NAME")
 FORMATS = os.environ.get("PUBLISH_FORMATS")
 delay_sek = float(os.environ.get("TIME_DELAY_SEK"))
 publish_formats = FORMATS.split(',')
 
+use_requests = True
+
 signal_names={
-    "INT":"simulated_signal_int",
-    "FLOAT":"simulated_signal_float",
-    "TEXT":"simulated_signal_text"
+    "INT":f"{SIGNAL_NAME}",
+    "FLOAT":f"{SIGNAL_NAME}",
+    "TEXT":f"{SIGNAL_NAME}"
 }
 headersList = {
  "Accept": "*/*",
@@ -24,57 +26,65 @@ headersList = {
  "Content-Type": "application/json" 
 }
 
-def upsert_device_info(source_name:str, source_info:str, zone_info:str, signal_formats:list):
+def upsert_device_info(source_name:str, signal_formats:list):
     conn = http.client.HTTPSConnection(API_URL, 443)
-    payload = json.dumps({
-    "meta_zone":zone_info,
-    "meta_info":source_info,
-    "unique_name":source_name
-    })
-    conn.request("POST", "/addSource/", payload, headersList)
-    response = conn.getresponse()
-    result = response.read()
-    print(result.decode("utf-8"))
+
+    #payload = json.dumps({
+    #"meta_zone":zone_info,
+    #"meta_info":source_info,
+    #"unique_name":source_name
+    #})
+    #conn.request("POST", "/addSource/", payload, headersList)
+    #response = conn.getresponse()
+    #result = response.read()
+    #print(result.decode("utf-8"))
     #response = requests.request("POST", API_URL+'/addSource/', data=payload,  headers=headersList)
     #print(response.text)
 
     for signal_type in signal_formats:
         if(signal_type == 'INT'):
             payload = json.dumps({
-            "meta_info":"UNIT: counts, MSG: A simulated int signal",
+            "meta_info":"UNIT: whole values, A simulated signal",
             "unique_name":signal_names["INT"],
             "source_name":source_name
             })
-            conn.request("POST", "/addSignal/", payload, headersList)
-            response = conn.getresponse()
-            result = response.read()
-            print(result.decode("utf-8"))
-            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
-            #print(response.text)
+
+            if(use_requests):
+                response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+                print(response.text)
+            else:
+                conn.request("POST", "/addSignal/", payload, headersList)
+                response = conn.getresponse()
+                result = response.read()
+                print(result.decode("utf-8"))                
         elif(signal_type == 'FLOAT'):
             payload = json.dumps({
-            "meta_info":"UNIT: C, MSG: A simulated float signal",
+            "meta_info":"UNIT: C, A simulated signal",
             "unique_name":signal_names["FLOAT"],
             "source_name":source_name
             })
-            conn.request("POST", "/addSignal/", payload, headersList)
-            response = conn.getresponse()
-            result = response.read()
-            print(result.decode("utf-8"))
-            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
-            #print(response.text)
+            if(use_requests):
+                response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+                print(response.text)
+            else:
+                conn.request("POST", "/addSignal/", payload, headersList)
+                response = conn.getresponse()
+                result = response.read()
+                print(result.decode("utf-8"))    
         else:
             payload = json.dumps({
-            "meta_info":"UNIT: text, MSG: A simulated text signal",
+            "meta_info":"UNIT: text, MSG: A simulated signal",
             "unique_name":signal_names["TEXT"],
             "source_name":source_name
             })
-            conn.request("POST", "/addSignal/", payload, headersList)
-            response = conn.getresponse()
-            result = response.read()
-            print(result.decode("utf-8"))
-            #response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
-            #print(response.text)
+            if(use_requests):
+                response = requests.request("POST", API_URL+'/addSignal/', data=payload,  headers=headersList)
+                print(response.text)
+            else:
+                conn.request("POST", "/addSignal/", payload, headersList)
+                response = conn.getresponse()
+                result = response.read()
+                print(result.decode("utf-8"))    
     conn.close()
 
 def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn:http.client.HTTPSConnection):
@@ -89,12 +99,15 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn
             }
             ]
         })
-        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
-        response = conn.getresponse()
-        result = response.read()
-        print(result.decode("utf-8"))
-        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        #print(response.text)
+
+        if(use_requests):
+            response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+            print(response.text)
+        else:
+            conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
     #FLOAT
     elif(value_type == 'FLOAT'):
         payload = json.dumps({
@@ -106,12 +119,15 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn
             }
             ]
         })
-        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
-        response = conn.getresponse()
-        result = response.read()
-        print(result.decode("utf-8"))
-        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        #print(response.text)
+        if(use_requests):
+            response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+            print(response.text)    
+        else:
+            conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
+
     #TEXT
     else:
         payload = json.dumps({
@@ -123,14 +139,17 @@ def write_value(value_type:str, source_name:str, value, timestamp:datetime, conn
             }
             ]
         })
-        conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
-        response = conn.getresponse()
-        result = response.read()
-        print(result.decode("utf-8"))
-        #response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
-        #print(response.text)
+        if(use_requests):
+            response = requests.request("PUT", f"{API_URL}/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", data=payload,  headers=headersList)
+            print(response.text)
+        else:   
+            conn.request("PUT", f"/writeTimeseriesData/{source_name}/{signal_names[value_type]}/", payload, headersList)
+            response = conn.getresponse()
+            result = response.read()
+            print(result.decode("utf-8"))
+
 def main():
-    upsert_device_info(SOURCE_NAME, f"Air pressure, temperature, humidity, co2 {FORMATS}.", SOURCE_ZONE_INFO, publish_formats)
+    upsert_device_info(SOURCE_NAME, publish_formats)
     generated_int_range = (np.random.randint(-50, 10),np.random.randint(11,100))
     generated_float_range = (float(np.random.randint(-10,10)),float(np.random.randint(10,40)))
 
