@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import logging, pytz
 SOURCE_METADATA_TABLE = "meta_sources"
 SIGNAL_METADATA_TABLE = "meta_signals"
+SIGNAL_LAST_DP_TABLE = "latest_dp_signals"
 SIGNAL_INSTANCE_PREFIX = "data_"
 
 log = logging.getLogger()
@@ -69,6 +70,17 @@ class Database:
         """ % SIGNAL_METADATA_TABLE)
 
         session.execute(f"CREATE INDEX IF NOT EXISTS ON {SIGNAL_METADATA_TABLE} (source_name)")
+        session.execute("""
+        CREATE TABLE IF NOT EXISTS %s (
+            signal_name text,
+            source_name text,
+            value_int int,
+            value_float float,
+            value_text text,
+            event_time timestamp,
+            PRIMARY KEY (signal_name, source_name)
+        )
+        """ % SIGNAL_LAST_DP_TABLE)
     
     def add_source(self, source:Source, session:Session):
         log.info("Adding source %s to database." % source.unique_name)
@@ -120,6 +132,7 @@ class Database:
         ) WITH CLUSTERING ORDER BY (event_time DESC);
         """ % tablename)
         query = SimpleStatement(f"INSERT INTO {tablename} (event_time, date, value_int, value_float, value_text) VALUES ( %s, %s, %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
+        query_faceplate = SimpleStatement(f"INSERT INTO {SIGNAL_LAST_DP_TABLE} (signal_name, source_name, event_time, value_int, value_float, value_text) VALUES ( %s, %s, %s, %s, %s, %s)", consistency_level=ConsistencyLevel.ONE)
         for t_point in timeseries.tsPoints:
             event_date = t_point.timestamp.astimezone(pytz.utc).date()
             v_int = None
@@ -132,6 +145,9 @@ class Database:
             else:
                 v_text = t_point.value
             try:
+                clean_source_name = f"{source_name.lower().replace('_','')}"
+                clean_signal_name = f"{signal_name.lower().replace('_','')}"
+                response_faceplate:ResultSet = session.execute(query_faceplate, (clean_signal_name, clean_source_name, t_point.timestamp, v_int, v_float, v_text))
                 response:ResultSet = session.execute(query, (t_point.timestamp, event_date, v_int, v_float, v_text))
             except:
                 return False
@@ -166,9 +182,9 @@ class Database:
             return ts_int, ts_float, ts_string
     def read_latest_dp(self, source_name:str, signal_name:str, session:Session) -> TSPoint:
         session.set_keyspace(self.__keyspace_name__)
-        event_date = datetime.now().astimezone(pytz.utc).date()
-        tablename = f"{SIGNAL_INSTANCE_PREFIX}{source_name.lower().replace('_','')}_{signal_name.lower().replace('_','')}"
-        query = SimpleStatement(f"SELECT * FROM {tablename} where date='{event_date}' LIMIT 1", consistency_level=ConsistencyLevel.QUORUM);
+        clean_source_name = f"{source_name.lower().replace('_','')}"
+        clean_signal_name = f"{signal_name.lower().replace('_','')}"
+        query = SimpleStatement(f"SELECT * FROM {SIGNAL_LAST_DP_TABLE} where source_name='{clean_source_name}' and signal_name='{clean_signal_name}' LIMIT 1", consistency_level=ConsistencyLevel.QUORUM);
         response:ResultSet = session.execute(query)
         row_raw = response.one()
         if not row_raw == None :
